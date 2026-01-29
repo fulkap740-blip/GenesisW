@@ -1,18 +1,20 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from config import OFFERS
 
-def offer_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🟣 White Bird", callback_data="offer_1")],
-        [InlineKeyboardButton(text="🔵 Genesis", callback_data="offer_2")]
-    ])
+def offers_kb():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(
+                text=offer["name"],
+                callback_data=f"offer_{oid}"
+            )] for oid, offer in OFFERS.items()
+        ]
+    )
 
-def profile_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Новая заявка", callback_data="new_request")]
-    ])
-
-def admin_offer_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Назначить White Bird", callback_data="admin_offer_1")],
-        [InlineKeyboardButton(text="Назначить Genesis", callback_data="admin_offer_2")]
-    ])
+def user_menu_kb():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="➕ Новая заявка", callback_data="new_request")],
+            [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")]
+        ]
+    )
