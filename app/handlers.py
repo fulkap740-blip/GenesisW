@@ -1,78 +1,106 @@
-from aiogram import F
-from aiogram.types import Message, CallbackQuery
+from aiogram import types, F
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, CallbackQuery
+from config import OFFERS, ADMIN_PASSWORD, ADMINS
+from keyboards import offers_kb, new_request_kb
+from states import RequestForm
+from database import users, requests
+from openpyxl import Workbook
+import datetime
 
-from . import database as db
-from .states import RequestForm
-from .keyboards import offer_kb, profile_kb, admin_offer_kb
-from .config import OFFERS, ADMIN_PASSWORD
+# ---------- USER ----------
 
-async def start(msg: Message):
-    db.create_user(msg.from_user.id)
-    await msg.answer("Выберите оффер:", reply_markup=offer_kb())
+async def start(message: Message):
+    users.setdefault(message.from_user.id, {
+        "wallet": None,
+        "offer": None,
+        "stats": {"paid": 0, "pending": 0, "cancelled": 0}
+    })
+    await message.answer(
+        "Выбери оффер:",
+        reply_markup=offers_kb()
+    )
 
 async def choose_offer(call: CallbackQuery):
     offer_id = int(call.data.split("_")[1])
-    db.update_user_offer(call.from_user.id, offer_id)
-    await call.message.answer("Введите USDT TRC20 кошелёк:")
+    users[call.from_user.id]["offer"] = offer_id
+    await call.message.answer(
+        f"Оффер выбран: {OFFERS[offer_id]['name']}",
+        reply_markup=new_request_kb()
+    )
     await call.answer()
-
-async def save_wallet(msg: Message):
-    if not msg.text.startswith("T"):
-        return await msg.answer("Неверный формат кошелька")
-    db.update_wallet(msg.from_user.id, msg.text)
-    await msg.answer("Кошелёк сохранён", reply_markup=profile_kb())
 
 async def new_request(call: CallbackQuery, state: FSMContext):
+    await call.message.answer("Пришли ссылку на видео")
     await state.set_state(RequestForm.video)
-    await call.message.answer("Ссылка на видео:")
     await call.answer()
 
-async def step_video(msg: Message, state: FSMContext):
-    await state.update_data(video=msg.text)
+async def step_video(message: Message, state: FSMContext):
+    await state.update_data(video=message.text)
+    await message.answer("Пришли ссылку на скриншот (Google Drive)")
     await state.set_state(RequestForm.proof)
-    await msg.answer("Ссылка на пруф:")
 
-async def step_proof(msg: Message, state: FSMContext):
-    await state.update_data(proof=msg.text)
+async def step_proof(message: Message, state: FSMContext):
+    await state.update_data(proof=message.text)
+    await message.answer("Сколько просмотров?")
     await state.set_state(RequestForm.views)
-    await msg.answer("Количество просмотров:")
 
-async def step_views(msg: Message, state: FSMContext):
-    if not msg.text.isdigit():
-        return await msg.answer("Введите число")
-    views = int(msg.text)
+async def step_views(message: Message, state: FSMContext):
     data = await state.get_data()
-    user = db.get_user(msg.from_user.id)
-    rate = OFFERS[user[1]]["rate"]
-    amount = round((views / 1000) * rate, 2)
+    user = users[message.from_user.id]
 
-    db.add_request((
-        msg.from_user.id,
-        user[1],
-        data["video"],
-        data["proof"],
-        views,
-        amount,
-        "⏳ На проверке"
-    ))
+    req = {
+        "user_id": message.from_user.id,
+        "offer": user["offer"],
+        "video": data["video"],
+        "proof": data["proof"],
+        "views": int(message.text),
+        "status": "pending",
+        "date": datetime.datetime.now()
+    }
 
-    await msg.answer(
-        f"Заявка принята\n💰 {amount} USDT\n⚠️ Может быть пересмотрено"
-    )
+    requests.append(req)
+    user["stats"]["pending"] += 1
+
+    await message.answer("Заявка отправлена. Ожидай проверку.")
     await state.clear()
 
-async def gen_admin(msg: Message):
-    await msg.answer("Введите пароль администратора:")
+    send_excel_to_admin(req)
 
-async def admin_auth(msg: Message):
-    if msg.text != ADMIN_PASSWORD:
-        return
-    db.set_admin(msg.from_user.id)
-    await msg.answer("Вы админ. Назначьте оффер:", reply_markup=admin_offer_kb())
+# ---------- ADMIN ----------
 
-async def admin_offer(call: CallbackQuery):
-    offer_id = int(call.data.split("_")[2])
-    db.set_admin_offer(call.from_user.id, offer_id)
-    await call.message.answer("Оффер администратора назначен")
-    await call.answer()
+async def gen_admin(message: Message, state: FSMContext):
+    await message.answer("Введи пароль администратора")
+    await state.set_state("admin_auth")
+
+async def admin_auth(message: Message, state: FSMContext):
+    if message.text == ADMIN_PASSWORD:
+        await message.answer("✅ Ты админ")
+        await state.clear()
+    else:
+        await message.answer("❌ Неверный пароль")
+
+# ---------- EXCEL ----------
+
+def send_excel_to_admin(req):
+    wb = Workbook()
+    ws = wb.active
+
+    ws.append([
+        "User ID", "Offer", "Video", "Proof", "Views", "Status", "Date"
+    ])
+
+    ws.append([
+        req["user_id"],
+        req["offer"],
+        req["video"],
+        req["proof"],
+        req["views"],
+        req["status"],
+        req["date"].strftime("%Y-%m-%d %H:%M")
+    ])
+
+    filename = f"/tmp/request_{req['user_id']}.xlsx"
+    wb.save(filename)
+
+    # отправка будет через bot в следующем шаге
