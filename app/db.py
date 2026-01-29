@@ -1,26 +1,30 @@
-import aiosqlite
+import sqlite3
 
-DB_NAME = "bot.db"
+DB_NAME = "database.db"
 
-async def init_db():
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("""
+def init_db():
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
-            offer_id INTEGER,
-            wallet TEXT
+            wallet TEXT,
+            total_paid REAL DEFAULT 0
         )
         """)
-        await db.execute("""
+
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            offer_id INTEGER,
-            video TEXT,
-            proof TEXT,
+            offer TEXT,
+            video_link TEXT,
+            proof_link TEXT,
             views INTEGER,
             amount REAL,
             status TEXT
         )
         """)
-        await db.commit()
+
+        conn.commit()
