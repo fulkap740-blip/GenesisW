@@ -19,6 +19,7 @@ dp.message.register(step_views, RequestForm.views)
 dp.message.register(gen_admin, F.text == "/gen_admin")
 dp.message.register(admin_auth)
 dp.message.register(export_excel, F.text == "/export")
+dp.message.register(change_rate, F.text.startswith("/rate"))
 
 async def main():
     init_db()
