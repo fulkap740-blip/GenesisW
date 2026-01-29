@@ -1,66 +1,64 @@
-from aiogram.types import Message, CallbackQuery
+from aiogram import types
 from aiogram.fsm.context import FSMContext
-from db import DB_NAME
-import aiosqlite
-from states import RequestForm
-from keyboards import offers_kb, user_menu_kb
-from config import OFFERS
+from app.keyboards import offer_keyboard, main_menu
+from app.states import RequestForm
+from app.config import OFFERS
+import sqlite3
+from app.db import DB_NAME
 
-async def start(message: Message):
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute(
-            "INSERT OR IGNORE INTO users (user_id) VALUES (?)",
-            (message.from_user.id,)
-        )
-        await db.commit()
-    await message.answer("Выбери оффер:", reply_markup=offers_kb())
+async def start(message: types.Message):
+    await message.answer("Выбери оффер:", reply_markup=offer_keyboard())
 
-async def choose_offer(call: CallbackQuery):
+async def choose_offer(call: types.CallbackQuery, state: FSMContext):
     offer_id = int(call.data.split("_")[1])
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute(
-            "UPDATE users SET offer_id=? WHERE user_id=?",
-            (offer_id, call.from_user.id)
+    await state.update_data(offer=OFFERS[offer_id])
+    await call.message.answer("Привяжи кошелёк USDT TRC20:")
+    await call.answer()
+
+async def save_wallet(message: types.Message, state: FSMContext):
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO users (user_id, wallet) VALUES (?,?)",
+            (message.from_user.id, message.text)
         )
-        await db.commit()
-    await call.message.answer("Оффер выбран", reply_markup=user_menu_kb())
-    await call.answer()
+    await message.answer("Кошелёк сохранён", reply_markup=main_menu())
 
-async def new_request(call: CallbackQuery, state: FSMContext):
-    await state.set_state(RequestForm.video)
+async def new_request(call: types.CallbackQuery, state: FSMContext):
     await call.message.answer("Ссылка на видео:")
+    await state.set_state(RequestForm.video)
     await call.answer()
 
-async def step_video(message: Message, state: FSMContext):
+async def step_video(message: types.Message, state: FSMContext):
     await state.update_data(video=message.text)
+    await message.answer("Ссылка на пруф (Google Drive):")
     await state.set_state(RequestForm.proof)
-    await message.answer("Ссылка на пруф:")
 
-async def step_proof(message: Message, state: FSMContext):
+async def step_proof(message: types.Message, state: FSMContext):
     await state.update_data(proof=message.text)
-    await state.set_state(RequestForm.views)
     await message.answer("Количество просмотров:")
+    await state.set_state(RequestForm.views)
 
-async def step_views(message: Message, state: FSMContext):
+async def step_views(message: types.Message, state: FSMContext):
     data = await state.get_data()
     views = int(message.text)
+    amount = views * data["offer"]["rate"]
 
-    async with aiosqlite.connect(DB_NAME) as db:
-        user = await db.execute_fetchone(
-            "SELECT offer_id FROM users WHERE user_id=?",
-            (message.from_user.id,)
-        )
-        offer_id = user[0]
-        rate = OFFERS[offer_id]["rate"]
-        amount = round((views / 1000) * rate, 2)
-
-        await db.execute("""
-        INSERT INTO requests (user_id, offer_id, video, proof, views, amount, status)
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute("""
+        INSERT INTO requests
+        (user_id, offer, video_link, proof_link, views, amount, status)
         VALUES (?,?,?,?,?,?,?)
-        """, (message.from_user.id, offer_id, data["video"], data["proof"], views, amount, "pending"))
-        await db.commit()
+        """, (
+            message.from_user.id,
+            data["offer"]["name"],
+            data["video"],
+            data["proof"],
+            views,
+            amount,
+            "pending"
+        ))
 
     await message.answer(
-        f"Заявка отправлена\n💰 {amount} USDT\n⚠️ Может быть пересмотрено модерацией"
+        f"Заявка отправлена\nСумма: {amount} USDT\n(может быть пересмотрена)"
     )
     await state.clear()
