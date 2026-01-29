@@ -8,7 +8,10 @@ import sqlite3
 
 
 async def start(message: types.Message):
-    await message.answer("Выбери оффер:", reply_markup=offer_keyboard())
+    await message.answer(
+        "Выбери оффер:",
+        reply_markup=offer_keyboard()
+    )
 
 
 async def choose_offer(call: types.CallbackQuery, state: FSMContext):
@@ -26,7 +29,10 @@ async def save_wallet(message: types.Message, state: FSMContext):
         )
         conn.commit()
 
-    await message.answer("Кошелёк сохранён", reply_markup=main_menu())
+    await message.answer(
+        "Кошелёк сохранён",
+        reply_markup=main_menu()
+    )
 
 
 async def new_request(call: types.CallbackQuery, state: FSMContext):
@@ -71,11 +77,11 @@ async def step_views(message: types.Message, state: FSMContext):
         conn.commit()
 
     await message.answer(
-        f"Заявка отправлена\n"
+        f"✅ Заявка отправлена\n\n"
         f"Просмотры: {views}\n"
         f"Ставка: {rate} USDT\n"
-        f"Сумма: {amount:.2f} USDT\n"
-        f"(может быть пересмотрена модерацией)"
+        f"Сумма: {amount:.2f} USDT\n\n"
+        f"⚠️ Сумма может быть пересмотрена модерацией"
     )
 
     await state.clear()
