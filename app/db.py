@@ -2,6 +2,7 @@ import sqlite3
 
 DB_NAME = "database.db"
 
+
 def init_db():
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
@@ -9,8 +10,7 @@ def init_db():
         cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
-            wallet TEXT,
-            total_paid REAL DEFAULT 0
+            wallet TEXT
         )
         """)
 
@@ -35,16 +35,25 @@ def init_db():
         )
         """)
 
+        # дефолтные rate (если пусто)
         cur.execute("INSERT OR IGNORE INTO rates VALUES ('White Bird', 1.5)")
         cur.execute("INSERT OR IGNORE INTO rates VALUES ('Genesis', 2.0)")
 
         conn.commit()
 
 
-def get_rate(offer: str) -> float:
+def get_rate(offer):
     with sqlite3.connect(DB_NAME) as conn:
         row = conn.execute(
-            "SELECT rate FROM rates WHERE offer = ?",
-            (offer,)
+            "SELECT rate FROM rates WHERE offer = ?", (offer,)
         ).fetchone()
-        return row[0] if row else 0.0
+        return row[0]
+
+
+def set_rate(offer, rate):
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute(
+            "UPDATE rates SET rate = ? WHERE offer = ?",
+            (rate, offer)
+        )
+        conn.commit()
