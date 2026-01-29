@@ -18,7 +18,7 @@ def user_menu():
 
 def admin_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Экспорт заявок", callback_data="admin_export")],
+        [InlineKeyboardButton(text="📊 Заявки на сегодня", callback_data="admin_today")],
         [InlineKeyboardButton(text="⚙️ Изменить rate", callback_data="admin_rate")],
         [InlineKeyboardButton(text="🚪 Выход", callback_data="admin_exit")]
     ])
