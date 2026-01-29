@@ -28,4 +28,23 @@ def init_db():
         )
         """)
 
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS rates (
+            offer TEXT PRIMARY KEY,
+            rate REAL
+        )
+        """)
+
+        cur.execute("INSERT OR IGNORE INTO rates VALUES ('White Bird', 1.5)")
+        cur.execute("INSERT OR IGNORE INTO rates VALUES ('Genesis', 2.0)")
+
         conn.commit()
+
+
+def get_rate(offer: str) -> float:
+    with sqlite3.connect(DB_NAME) as conn:
+        row = conn.execute(
+            "SELECT rate FROM rates WHERE offer = ?",
+            (offer,)
+        ).fetchone()
+        return row[0] if row else 0.0
