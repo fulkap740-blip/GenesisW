@@ -9,7 +9,6 @@ ADMINS = set()
 
 
 async def gen_admin(message: types.Message):
-    # скрытая команда, пользователь её не видит
     await message.answer("Введите пароль администратора:")
 
 
@@ -18,7 +17,7 @@ async def admin_auth(message: types.Message):
         ADMINS.add(message.from_user.id)
         await message.answer("✅ Вы вошли в админку", reply_markup=admin_menu())
     else:
-        # молча игнорируем, без подсказок
+        # молча игнорируем
         return
 
 
@@ -28,7 +27,15 @@ async def admin_export(call: types.CallbackQuery):
 
     with sqlite3.connect(DB_NAME) as conn:
         rows = conn.execute("""
-            SELECT user_id, offer, video_link, proof_link, views, amount, status, created
+            SELECT
+                user_id,
+                offer,
+                video_link,
+                proof_link,
+                views,
+                amount,
+                status,
+                created
             FROM requests
             ORDER BY created DESC
         """).fetchall()
@@ -40,5 +47,5 @@ async def admin_export(call: types.CallbackQuery):
 
 async def admin_exit(call: types.CallbackQuery):
     ADMINS.discard(call.from_user.id)
-    await call.message.answer("Вы вышли из админки")
+    await call.message.answer("🚪 Вы вышли из админки")
     await call.answer()
