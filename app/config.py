@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("8592190715:AAEEAMjH32I23ekBJyXcxuxpOvsMHVaDeDc")
-ADMIN_PASSWORD = os.getenv("Su54us")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 OFFERS = {
     1: {"name": "White Bird", "rate": 1.5},
