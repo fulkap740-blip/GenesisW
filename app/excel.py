@@ -1,12 +1,24 @@
 from openpyxl import Workbook
 
-def make_excel(rows):
+
+def create_excel(rows):
     wb = Workbook()
     ws = wb.active
-    ws.append(["User ID", "Offer ID", "Video", "Proof", "Views", "Amount", "Status"])
+    ws.title = "Requests"
 
-    for r in rows:
-        ws.append(r)
+    ws.append([
+        "User ID",
+        "Offer",
+        "Video Link",
+        "Proof Link",
+        "Views",
+        "Amount",
+        "Status",
+        "Created"
+    ])
+
+    for row in rows:
+        ws.append(row)
 
     path = "requests.xlsx"
     wb.save(path)
