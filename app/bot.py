@@ -1,23 +1,26 @@
 import asyncio
+import os
 from aiogram import Bot, Dispatcher, F
 
-from .config import BOT_TOKEN
-from .handlers import *
+print("BOT_TOKEN ENV =", os.getenv("BOT_TOKEN"))
+
+from config import BOT_TOKEN
+from handlers import *
+from states import RequestForm
 
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
 dp.message.register(start, F.text == "/start")
 dp.callback_query.register(choose_offer, F.data.startswith("offer_"))
-dp.message.register(save_wallet, F.text.startswith("T"))
 dp.callback_query.register(new_request, F.data == "new_request")
+
 dp.message.register(step_video, RequestForm.video)
 dp.message.register(step_proof, RequestForm.proof)
 dp.message.register(step_views, RequestForm.views)
 
 dp.message.register(gen_admin, F.text == "/gen_admin")
 dp.message.register(admin_auth)
-dp.callback_query.register(admin_offer, F.data.startswith("admin_offer_"))
 
 async def main():
     await dp.start_polling(bot)
