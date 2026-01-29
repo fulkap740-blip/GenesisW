@@ -1,7 +1,7 @@
 from openpyxl import Workbook
 
 
-def create_excel(rows):
+def create_excel(rows, filename):
     wb = Workbook()
     ws = wb.active
     ws.title = "Requests"
@@ -20,6 +20,5 @@ def create_excel(rows):
     for row in rows:
         ws.append(row)
 
-    path = "requests.xlsx"
-    wb.save(path)
-    return path
+    wb.save(filename)
+    return filename
