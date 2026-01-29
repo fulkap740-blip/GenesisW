@@ -1,9 +1,10 @@
 import asyncio
 from aiogram import Bot, Dispatcher, F
-from config import BOT_TOKEN
-from db import init_db
-from handlers_user import *
-from states import RequestForm
+
+from app.config import BOT_TOKEN
+from app.db import init_db
+from app.handlers_user import *
+from app.states import RequestForm
 
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
