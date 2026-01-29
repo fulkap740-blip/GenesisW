@@ -1,18 +1,17 @@
 from aiogram import types
 from aiogram.fsm.context import FSMContext
-from app.keyboards import offer_keyboard, main_menu
+from app.keyboards import offers_kb, user_menu
 from app.states import RequestForm
-from app.config import OFFERS
+from app.db import DB_NAME, get_rate
 import sqlite3
-from app.db import DB_NAME
 
 async def start(message: types.Message):
-    await message.answer("Выбери оффер:", reply_markup=offer_keyboard())
+    await message.answer("Выбери оффер:", reply_markup=offers_kb())
 
 async def choose_offer(call: types.CallbackQuery, state: FSMContext):
     offer_id = int(call.data.split("_")[1])
-    await state.update_data(offer=OFFERS[offer_id])
-    await call.message.answer("Привяжи кошелёк USDT TRC20:")
+    await state.update_data(offer_id=offer_id)
+    await call.message.answer("Введи кошелёк USDT TRC20:")
     await call.answer()
 
 async def save_wallet(message: types.Message, state: FSMContext):
@@ -21,7 +20,7 @@ async def save_wallet(message: types.Message, state: FSMContext):
             "INSERT OR REPLACE INTO users (user_id, wallet) VALUES (?,?)",
             (message.from_user.id, message.text)
         )
-    await message.answer("Кошелёк сохранён", reply_markup=main_menu())
+    await message.answer("Кошелёк сохранён", reply_markup=user_menu())
 
 async def new_request(call: types.CallbackQuery, state: FSMContext):
     await call.message.answer("Ссылка на видео:")
@@ -30,7 +29,7 @@ async def new_request(call: types.CallbackQuery, state: FSMContext):
 
 async def step_video(message: types.Message, state: FSMContext):
     await state.update_data(video=message.text)
-    await message.answer("Ссылка на пруф (Google Drive):")
+    await message.answer("Ссылка на proof:")
     await state.set_state(RequestForm.proof)
 
 async def step_proof(message: types.Message, state: FSMContext):
@@ -41,16 +40,17 @@ async def step_proof(message: types.Message, state: FSMContext):
 async def step_views(message: types.Message, state: FSMContext):
     data = await state.get_data()
     views = int(message.text)
-    amount = views * data["offer"]["rate"]
+    rate = get_rate(data["offer_id"])
+    amount = round((views / 1000) * rate, 2)
 
     with sqlite3.connect(DB_NAME) as conn:
         conn.execute("""
         INSERT INTO requests
-        (user_id, offer, video_link, proof_link, views, amount, status)
+        (user_id, offer_id, video, proof, views, amount, status)
         VALUES (?,?,?,?,?,?,?)
         """, (
             message.from_user.id,
-            data["offer"]["name"],
+            data["offer_id"],
             data["video"],
             data["proof"],
             views,
@@ -59,6 +59,6 @@ async def step_views(message: types.Message, state: FSMContext):
         ))
 
     await message.answer(
-        f"Заявка отправлена\nСумма: {amount} USDT\n(может быть пересмотрена)"
+        f"Заявка отправлена\n💰 {amount} USDT\n⚠️ Может быть пересмотрено"
     )
     await state.clear()
