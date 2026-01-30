@@ -26,6 +26,9 @@ dp.message.register(admin_auth)
 dp.callback_query.register(admin_today, F.data == "admin_today")
 dp.callback_query.register(admin_rate, F.data == "admin_rate")
 dp.callback_query.register(admin_exit, F.data == "admin_exit")
+dp.callback_query.register(approve_request, F.data.startswith("approve_"))
+dp.callback_query.register(reject_request, F.data.startswith("reject_"))
+
 
 
 async def main():
