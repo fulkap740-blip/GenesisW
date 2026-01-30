@@ -26,13 +26,7 @@ def admin_menu():
 def approve_reject_kb(request_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(
-                text="✅ Одобрить",
-                callback_data=f"approve_{request_id}"
-            ),
-            InlineKeyboardButton(
-                text="❌ Отклонить",
-                callback_data=f"reject_{request_id}"
-            )
+            InlineKeyboardButton(text="✅ Одобрить", callback_data=f"approve_{request_id}"),
+            InlineKeyboardButton(text="❌ Отклонить", callback_data=f"reject_{request_id}")
         ]
     ])
