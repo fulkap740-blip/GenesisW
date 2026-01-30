@@ -12,7 +12,7 @@ dp = Dispatcher()
 # USER
 dp.message.register(start, F.text == "/start")
 dp.callback_query.register(choose_offer, F.data.startswith("offer_"))
-dp.message.register(save_wallet)
+dp.message.register(save_wallet, F.text.startswith("T"))
 dp.callback_query.register(new_request, F.data == "new_request")
 dp.message.register(step_video, RequestForm.video)
 dp.message.register(step_proof, RequestForm.proof)
