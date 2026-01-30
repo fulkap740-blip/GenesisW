@@ -1,10 +1,10 @@
 from aiogram import types
 from aiogram.fsm.context import FSMContext
+import sqlite3
+
 from app.states import RequestForm
 from app.keyboards import offer_keyboard, user_menu
 from app.db import DB_NAME, get_rate
-import sqlite3
-
 
 STATUS_MAP = {
     "pending": "🟡 На проверке",
@@ -22,12 +22,12 @@ async def choose_offer(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(offer=offer)
 
     with sqlite3.connect(DB_NAME) as conn:
-        row = conn.execute(
+        wallet = conn.execute(
             "SELECT wallet FROM users WHERE user_id = ?",
             (call.from_user.id,)
         ).fetchone()
 
-    if row and row[0]:
+    if wallet:
         await call.message.answer("Оффер выбран.", reply_markup=user_menu())
     else:
         await call.message.answer("Введи кошелёк USDT TRC20:")
@@ -46,7 +46,6 @@ async def save_wallet(message: types.Message):
     await message.answer("Кошелёк сохранён.", reply_markup=user_menu())
 
 
-# 👉 ВОТ ОНА. ЕЁ НЕ ХВАТАЛО.
 async def new_request(call: types.CallbackQuery, state: FSMContext):
     await call.message.answer("Ссылка на видео:")
     await state.set_state(RequestForm.video)
@@ -75,8 +74,8 @@ async def step_views(message: types.Message, state: FSMContext):
     with sqlite3.connect(DB_NAME) as conn:
         conn.execute("""
         INSERT INTO requests
-        (user_id, offer, video_link, proof_link, views, amount, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'pending')
+        (user_id, offer, video_link, proof_link, views, amount)
+        VALUES (?, ?, ?, ?, ?, ?)
         """, (
             message.from_user.id,
             data["offer"],
@@ -89,8 +88,8 @@ async def step_views(message: types.Message, state: FSMContext):
 
     await message.answer(
         f"✅ Заявка отправлена\n"
-        f"Сумма: {amount:.2f} USDT\n"
-        f"Статус: 🟡 На проверке",
+        f"💰 Сумма: {amount:.2f} USDT\n"
+        f"📌 Статус: 🟡 На проверке",
         reply_markup=user_menu()
     )
 
@@ -111,15 +110,10 @@ async def profile(call: types.CallbackQuery):
         ORDER BY created DESC
         """, (call.from_user.id,)).fetchall()
 
-    text = (
-        f"👤 Профиль\n\n"
-        f"ID: {call.from_user.id}\n"
-        f"Кошелёк: {wallet[0] if wallet else 'не указан'}\n\n"
-        f"📋 Заявки:\n"
-    )
+    text = f"👤 Профиль\n\nID: {call.from_user.id}\nКошелёк: {wallet[0] if wallet else 'не указан'}\n\n"
 
     if not reqs:
-        text += "— заявок нет"
+        text += "Заявок нет"
     else:
         for r in reqs:
             text += f"{r[0]} | {r[1]:.2f} USDT | {STATUS_MAP[r[2]]}\n"
@@ -129,8 +123,5 @@ async def profile(call: types.CallbackQuery):
 
 
 async def help_cmd(call: types.CallbackQuery):
-    await call.message.answer(
-        "ℹ️ Используй меню ниже для работы с ботом.",
-        reply_markup=user_menu()
-    )
+    await call.message.answer("Используй меню ниже.", reply_markup=user_menu())
     await call.answer()
