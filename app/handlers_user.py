@@ -46,6 +46,57 @@ async def save_wallet(message: types.Message):
     await message.answer("Кошелёк сохранён.", reply_markup=user_menu())
 
 
+# 👉 ВОТ ОНА. ЕЁ НЕ ХВАТАЛО.
+async def new_request(call: types.CallbackQuery, state: FSMContext):
+    await call.message.answer("Ссылка на видео:")
+    await state.set_state(RequestForm.video)
+    await call.answer()
+
+
+async def step_video(message: types.Message, state: FSMContext):
+    await state.update_data(video=message.text)
+    await message.answer("Ссылка на пруф:")
+    await state.set_state(RequestForm.proof)
+
+
+async def step_proof(message: types.Message, state: FSMContext):
+    await state.update_data(proof=message.text)
+    await message.answer("Количество просмотров:")
+    await state.set_state(RequestForm.views)
+
+
+async def step_views(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    views = int(message.text)
+
+    rate = get_rate(data["offer"])
+    amount = (views / 1000) * rate
+
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute("""
+        INSERT INTO requests
+        (user_id, offer, video_link, proof_link, views, amount, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending')
+        """, (
+            message.from_user.id,
+            data["offer"],
+            data["video"],
+            data["proof"],
+            views,
+            amount
+        ))
+        conn.commit()
+
+    await message.answer(
+        f"✅ Заявка отправлена\n"
+        f"Сумма: {amount:.2f} USDT\n"
+        f"Статус: 🟡 На проверке",
+        reply_markup=user_menu()
+    )
+
+    await state.clear()
+
+
 async def profile(call: types.CallbackQuery):
     with sqlite3.connect(DB_NAME) as conn:
         wallet = conn.execute(
