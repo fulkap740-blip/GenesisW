@@ -27,22 +27,14 @@ async def admin_today(call: types.CallbackQuery):
 
     with sqlite3.connect(DB_NAME) as conn:
         rows = conn.execute("""
-        SELECT
-            id,
-            user_id,
-            offer,
-            video_link,
-            proof_link,
-            views,
-            amount,
-            status
+        SELECT id, user_id, offer, video_link, proof_link, views, amount, status
         FROM requests
         WHERE DATE(created) = ?
         ORDER BY created DESC
         """, (today,)).fetchall()
 
     if not rows:
-        await call.message.answer("За сегодня заявок нет.")
+        await call.message.answer("Заявок нет.")
         await call.answer()
         return
 
@@ -58,10 +50,7 @@ async def admin_today(call: types.CallbackQuery):
             f"📌 Статус: {r[7]}"
         )
 
-        await call.message.answer(
-            text,
-            reply_markup=approve_reject_kb(r[0])
-        )
+        await call.message.answer(text, reply_markup=approve_reject_kb(r[0]))
 
     await call.answer()
 
@@ -79,10 +68,8 @@ async def approve_request(call: types.CallbackQuery):
         )
         conn.commit()
 
-    await call.message.edit_text(
-        call.message.text + "\n\n🟢 Одобрено"
-    )
-    await call.answer("Заявка одобрена")
+    await call.message.edit_text(call.message.text + "\n\n🟢 Одобрено")
+    await call.answer("Одобрено")
 
 
 async def reject_request(call: types.CallbackQuery):
@@ -98,10 +85,8 @@ async def reject_request(call: types.CallbackQuery):
         )
         conn.commit()
 
-    await call.message.edit_text(
-        call.message.text + "\n\n🔴 Отклонено"
-    )
-    await call.answer("Заявка отклонена")
+    await call.message.edit_text(call.message.text + "\n\n🔴 Отклонено")
+    await call.answer("Отклонено")
 
 
 async def admin_exit(call: types.CallbackQuery):
