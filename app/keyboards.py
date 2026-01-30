@@ -19,6 +19,20 @@ def user_menu():
 def admin_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Заявки на сегодня", callback_data="admin_today")],
-        [InlineKeyboardButton(text="⚙️ Изменить rate", callback_data="admin_rate")],
         [InlineKeyboardButton(text="🚪 Выход", callback_data="admin_exit")]
+    ])
+
+
+def approve_reject_kb(request_id: int):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✅ Одобрить",
+                callback_data=f"approve_{request_id}"
+            ),
+            InlineKeyboardButton(
+                text="❌ Отклонить",
+                callback_data=f"reject_{request_id}"
+            )
+        ]
     ])
